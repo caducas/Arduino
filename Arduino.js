@@ -1,38 +1,40 @@
-var arduino = require('duino'),
-    board = new arduino.Board({
-		device: "USB",
-    	debug: true
-    });
 
-console.log('ARDUINO: started Plugin');
+try {
+	var arduino = require('duino'),
+	    board = new arduino.Board({
+			device: "USB",
+	    	debug: true
+	    });
+} catch(err) {
+	console.log('ARDUINO: Error initiating Arduino board, maybe not connected - try to reconnect!');
+}
 
 function execute(opts) {
 }
 
 function listenEvent(eventId, opts) {
-	console.log("ARDUINO: should start listener");
-	if(!opts.pin) {
-		throw new Error("option 'pin' is missing");
+	try{
+		if(!opts.pin) {
+			throw new Error("option 'pin' is missing");
+		}
+		var interval = opts.interval || 5000;
+
+		var listenPort = new arduino.Sensor({
+			board: board,
+			pin: opts.pin,
+			throttle: interval
+		});
+
+		listenOnPort(eventId, listenPort);
+	} catch (err) {
+		console.log('ARDUINO: Error starting listener!');
 	}
-	var interval = opts.interval || 5000;
-
-	console.log("interval:" + interval);
-	console.log(interval);
-	var listenPort = new arduino.Sensor({
-		board: board,
-		pin: opts.pin,
-		throttle: interval
-	});
-
-	listenOnPort(eventId, listenPort);
 }
 
-//after value change on listener port was noticed, listener gets deactivated for 20 ms (to not call listener more than once)
 function listenOnPort(eventId, listenPort) {
 	console.log('should start listener for Arduino');
 	listenPort.on('read', function(err, value) {
 		value = +value;
-		console.log(value);
 		process.emit(eventId+'', eventId, value);
 	});
 }
